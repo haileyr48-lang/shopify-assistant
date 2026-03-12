@@ -427,13 +427,12 @@ async function handleOAuthReturn(code, clientId, clientSecret, anthropicKey) {
   try {
     document.getElementById('oauth-screen').style.display = 'flex';
 
-    const tokenRes = await fetch(`https://corsproxy.io/?https://${STORE}/admin/oauth/access_token`, {
+    const tokenRes = await fetch('https://shopify-assistant-xi.vercel.app/api/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code: code
+        code: code,
+        shop: STORE
       })
     });
 
