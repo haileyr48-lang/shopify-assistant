@@ -210,7 +210,7 @@
       <div style="margin-top:16px;padding-top:16px;border-top:1px solid #333">
         <label style="display:block;font-size:11px;color:#39ff14;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Already authorized? Paste redirect URL here</label>
         <input type="text" id="direct-redirect-url" placeholder="https://haileyr48-lang.github.io/shopify-assistant/?code=..." style="width:100%;background:#111;border:1px solid #333;color:#fff;padding:10px;border-radius:4px;font-size:12px;box-sizing:border-box" />
-        <button class="setup-btn" onclick="directPaste()" style="margin-top:8px;background:#39ff14;color:#000;font-weight:700">Complete Connection →</button>
+        <button id="direct-paste-btn" class="setup-btn" style="margin-top:8px;background:#39ff14;color:#000;font-weight:700">Complete Connection →</button>
       </div>
       <div id="setup-error"></div>
     </div>
@@ -388,6 +388,11 @@ function directPaste() {
     alert('Could not find the code in that URL. Make sure you pasted the full redirect URL.');
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('direct-paste-btn');
+  if (btn) btn.addEventListener('click', directPaste);
+});
 
 function extractCode() {
   const urlInput = document.getElementById('redirect-url').value.trim();
