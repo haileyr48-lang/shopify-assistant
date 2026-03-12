@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shopify AI Assistant – Whiskers</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #96f23d;
+    --accent2: #3dffc0;
+    --text: #f0f0f0;
+    --muted: #666;
+    --error: #ff4d4d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* SETUP */
+  #setup-screen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .setup-card {
+    width: 100%; max-width: 540px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .setup-header { background: var(--accent); color: #000; padding: 20px 24px; }
+  .setup-header h1 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+  .setup-header p { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+  .setup-body { padding: 24px; }
+  .field-group { margin-bottom: 18px; }
+  .field-group label {
+    display: block; font-size: 11px; font-weight: 500; color: var(--accent);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .field-group input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 13px; padding: 11px 14px; outline: none; transition: border-color 0.2s;
+  }
+  .field-group input:focus { border-color: var(--accent); }
+  .field-group input::placeholder { color: var(--muted); }
+  .field-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .field-hint a { color: var(--accent2); text-decoration: none; }
+  .setup-btn {
+    width: 100%; background: var(--accent); color: #000; border: none; border-radius: 3px;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    padding: 13px; cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+  }
+  .setup-btn:hover { opacity: 0.9; }
+  #setup-error { color: var(--error); font-size: 12px; margin-top: 12px; display: none; }
+
+  /* OAUTH SCREEN */
+  #oauth-screen {
+    position: fixed; inset: 0; background: var(--bg); z-index: 99;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .oauth-card {
+    width: 100%; max-width: 480px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 4px; padding: 32px; text-align: center;
+  }
+  .oauth-card h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+  .oauth-card p { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 24px; }
+  .oauth-btn {
+    background: var(--accent); color: #000; border: none; border-radius: 3px;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    padding: 13px 24px; cursor: pointer; width: 100%; margin-bottom: 12px;
+  }
+  .oauth-btn:hover { opacity: 0.9; }
+  .oauth-manual { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); text-align: left; }
+  .oauth-manual label { display: block; font-size: 11px; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .oauth-manual input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 13px; padding: 11px 14px; outline: none; margin-bottom: 10px;
+  }
+  .oauth-manual input:focus { border-color: var(--accent); }
+
+  /* MAIN APP */
+  #app { display: none; flex-direction: column; height: 100vh; }
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 20px; height: 56px; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; }
+  .logo span { color: var(--accent); }
+  .store-badge {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+    padding: 4px 12px; font-size: 11px; color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .store-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .reset-btn {
+    background: none; border: 1px solid var(--border); border-radius: 3px;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 5px 10px; cursor: pointer; transition: all 0.2s;
+  }
+  .reset-btn:hover { border-color: var(--error); color: var(--error); }
+  .main-layout { display: flex; flex: 1; overflow: hidden; }
+  aside {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    padding: 16px 0; flex-shrink: 0; overflow-y: auto;
+  }
+  .sidebar-section { padding: 0 16px; margin-bottom: 24px; }
+  .sidebar-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .quick-action {
+    display: block; width: 100%; background: none; border: 1px solid var(--border);
+    border-radius: 3px; color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 11px; text-align: left; padding: 8px 10px; cursor: pointer;
+    margin-bottom: 6px; transition: all 0.15s; line-height: 1.4;
+  }
+  .quick-action:hover { border-color: var(--accent); color: var(--accent); background: rgba(150,242,61,0.05); }
+  .quick-action .qa-icon { display: block; font-size: 9px; color: var(--muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #messages { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .msg { display: flex; gap: 14px; max-width: 820px; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .msg-avatar { width: 32px; height: 32px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; font-weight: 700; font-family: 'Syne', sans-serif; }
+  .msg.user .msg-avatar { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+  .msg.assistant .msg-avatar { background: var(--accent); color: #000; }
+  .msg-content { flex: 1; padding-top: 5px; }
+  .msg-role { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .msg-text { font-size: 13.5px; line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .msg.user .msg-text { color: #ccc; }
+  .action-block { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 3px; padding: 12px 14px; margin-top: 10px; font-size: 12px; line-height: 1.6; }
+  .action-block.error { border-left-color: var(--error); }
+  .action-block.info { border-left-color: var(--accent2); }
+  .action-title { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .action-block.error .action-title { color: var(--error); }
+  .action-block.info .action-title { color: var(--accent2); }
+  .product-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .product-item:last-child { border-bottom: none; }
+  .product-item img { width: 36px; height: 36px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+  .product-item-info { flex: 1; min-width: 0; }
+  .product-item-title { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .product-item-meta { color: var(--muted); font-size: 11px; }
+  .thinking { display: flex; gap: 5px; align-items: center; padding-top: 5px; }
+  .thinking span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 40px; gap: 16px; }
+  .welcome-icon { width: 64px; height: 64px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: #000; }
+  .welcome h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; }
+  .welcome p { color: var(--muted); font-size: 13px; max-width: 420px; line-height: 1.6; }
+  .input-area { padding: 16px 20px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+  .input-row { display: flex; gap: 10px; align-items: flex-end; }
+  #user-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+    padding: 11px 14px; outline: none; resize: none; min-height: 44px; max-height: 140px;
+    line-height: 1.5; transition: border-color 0.2s;
+  }
+  #user-input:focus { border-color: var(--accent); }
+  #user-input::placeholder { color: var(--muted); }
+  #send-btn {
+    background: var(--accent); color: #000; border: none; border-radius: 3px;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    padding: 11px 18px; cursor: pointer; height: 44px;
+  }
+  #send-btn:hover { opacity: 0.85; }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .input-hint { font-size: 10px; color: var(--muted); margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- STEP 1: SETUP -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-header">
+      <h1>Shopify AI Assistant</h1>
+      <p>Whiskers Pet Supply — Connect your store</p>
+    </div>
+    <div class="setup-body">
+      <div class="field-group">
+        <label>Anthropic API Key</label>
+        <input type="password" id="anthropic-key" placeholder="sk-ant-..." autocomplete="off" />
+        <div class="field-hint">Get yours at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+      </div>
+      <div class="field-group">
+        <label>Shopify Client ID</label>
+        <input type="text" id="client-id" placeholder="64c3450054c83127e8415f9b16fd7178" autocomplete="off" />
+        <div class="field-hint">From Dev Dashboard → Claude Assistant → Settings → Credentials</div>
+      </div>
+      <div class="field-group">
+        <label>Shopify Client Secret</label>
+        <input type="password" id="client-secret" placeholder="Your client secret..." autocomplete="off" />
+        <div class="field-hint">Click the eye icon next to "Secret" in Dev Dashboard Settings</div>
+      </div>
+      <button class="setup-btn" onclick="startOAuth()">Connect My Store →</button>
+      <div id="setup-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2: OAUTH -->
+<div id="oauth-screen">
+  <div class="oauth-card">
+    <h2>Authorize with Shopify</h2>
+    <p>Click below to open Shopify and approve the connection. After approving, you'll be redirected back here automatically.</p>
+    <button class="oauth-btn" onclick="openShopifyAuth()">Open Shopify to Authorize →</button>
+
+    <div class="oauth-manual">
+      <p style="color:var(--muted);font-size:12px;margin-bottom:12px">After approving in Shopify, paste the full redirect URL here (it will contain a "code=" parameter):</p>
+      <label>Paste Redirect URL</label>
+      <input type="text" id="redirect-url" placeholder="https://haileyr48-lang.github.io/shopify-assistant/?code=abc123..." />
+      <button class="setup-btn" onclick="extractCode()" style="margin-top:0">Complete Connection →</button>
+      <div id="oauth-error" style="color:var(--error);font-size:12px;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <div class="logo">Shopify<span>AI</span></div>
+      <div class="store-badge">
+        <div class="store-dot"></div>
+        <span>Whiskers Pet Supply</span>
+      </div>
+    </div>
+    <button class="reset-btn" onclick="resetApp()">Disconnect</button>
+  </header>
+  <div class="main-layout">
+    <aside>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Quick Actions</div>
+        <button class="quick-action" onclick="sendQuick('List my 10 most recent products with their prices and status')">
+          <span class="qa-icon">📋 Products</span>List recent products
+        </button>
+        <button class="quick-action" onclick="sendQuick('Show me products that are out of stock or have low inventory')">
+          <span class="qa-icon">📦 Inventory</span>Check low inventory
+        </button>
+        <button class="quick-action" onclick="sendQuick('Find my 5 products with the weakest descriptions and suggest improvements')">
+          <span class="qa-icon">✍️ Content</span>Find weak descriptions
+        </button>
+        <button class="quick-action" onclick="sendQuick('List all products that are missing images or have only one image')">
+          <span class="qa-icon">🖼️ Images</span>Find missing images
+        </button>
+        <button class="quick-action" onclick="sendQuick('Audit my product titles for SEO — which ones could be improved?')">
+          <span class="qa-icon">🔍 SEO</span>SEO title audit
+        </button>
+        <button class="quick-action" onclick="sendQuick('Show me all my product collections')">
+          <span class="qa-icon">🗂️ Store</span>View collections
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Bulk Actions</div>
+        <button class="quick-action" onclick="sendQuick('Rewrite the descriptions for my last 5 products to be more engaging and conversion-focused. Update them in Shopify.')">
+          <span class="qa-icon">⚡ Bulk</span>Rewrite 5 descriptions
+        </button>
+        <button class="quick-action" onclick="sendQuick('Improve the SEO titles for my last 5 products. Update them in Shopify.')">
+          <span class="qa-icon">⚡ Bulk</span>Bulk improve SEO titles
+        </button>
+      </div>
+    </aside>
+    <div class="chat-container">
+      <div id="messages">
+        <div class="welcome" id="welcome-msg">
+          <div class="welcome-icon">AI</div>
+          <h2>Your Shopify AI Assistant</h2>
+          <p>Ask me anything about your store. I can list products, rewrite descriptions in bulk, check inventory, audit SEO, and push changes directly to Shopify.</p>
+        </div>
+      </div>
+      <div class="input-area">
+        <div class="input-row">
+          <textarea id="user-input" placeholder="Ask me anything... e.g. 'Rewrite my top 10 product descriptions'" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button id="send-btn" onclick="sendMessage()">Send →</button>
+        </div>
+        <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE = 'whiskerss.myshopify.com';
+const REDIRECT_URI = 'https://haileyr48-lang.github.io/shopify-assistant/';
+const SCOPES = 'read_products,write_products,read_inventory,write_inventory,read_orders,read_content,write_content';
+
+let config = {};
+let conversationHistory = [];
+let isLoading = false;
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Check if we have saved config
+  const saved = sessionStorage.getItem('shopify_assistant_config');
+  if (saved) {
+    config = JSON.parse(saved);
+    showApp();
+    return;
+  }
+
+  // Check if we're returning from OAuth (URL has ?code=)
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (code) {
+    const pending = sessionStorage.getItem('shopify_oauth_pending');
+    if (pending) {
+      const { anthropicKey, clientId, clientSecret } = JSON.parse(pending);
+      config = { anthropicKey, clientId, clientSecret, accessToken: null };
+      // Show manual token entry since we can't exchange server-side
+      handleOAuthReturn(code, clientId, clientSecret, anthropicKey);
+      return;
+    }
+  }
+});
+
+function startOAuth() {
+  const anthropicKey = document.getElementById('anthropic-key').value.trim();
+  const clientId = document.getElementById('client-id').value.trim();
+  const clientSecret = document.getElementById('client-secret').value.trim();
+  const errEl = document.getElementById('setup-error');
+
+  if (!anthropicKey || !clientId || !clientSecret) {
+    errEl.textContent = 'Please fill in all three fields.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  errEl.style.display = 'none';
+
+  // Save pending auth info
+  sessionStorage.setItem('shopify_oauth_pending', JSON.stringify({ anthropicKey, clientId, clientSecret }));
+  config = { anthropicKey, clientId, clientSecret };
+
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('oauth-screen').style.display = 'flex';
+}
+
+function openShopifyAuth() {
+  const state = Math.random().toString(36).substring(2);
+  sessionStorage.setItem('oauth_state', state);
+  const authUrl = `https://${STORE}/admin/oauth/authorize?client_id=${config.clientId}&scope=${SCOPES}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
+  window.open(authUrl, '_blank');
+}
+
+function extractCode() {
+  const urlInput = document.getElementById('redirect-url').value.trim();
+  const errEl = document.getElementById('oauth-error');
+
+  try {
+    const url = new URL(urlInput);
+    const code = url.searchParams.get('code');
+    if (!code) throw new Error('No code found in URL');
+
+    const pending = sessionStorage.getItem('shopify_oauth_pending');
+    if (!pending) throw new Error('Session expired, please start over');
+    const { anthropicKey, clientId, clientSecret } = JSON.parse(pending);
+
+    handleOAuthReturn(code, clientId, clientSecret, anthropicKey);
+  } catch (e) {
+    errEl.textContent = 'Could not find the code in that URL. Make sure you pasted the full redirect URL.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function handleOAuthReturn(code, clientId, clientSecret, anthropicKey) {
+  // We need to exchange the code for a token
+  // Since we can't do this client-side securely, we'll use a CORS proxy
+  try {
+    document.getElementById('oauth-screen').style.display = 'flex';
+
+    const tokenRes = await fetch(`https://cors-anywhere.herokuapp.com/https://${STORE}/admin/oauth/access_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code
+      })
+    });
+
+    if (!tokenRes.ok) throw new Error('Token exchange failed');
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+
+    config = { anthropicKey, clientId, clientSecret, accessToken, store: STORE };
+    sessionStorage.setItem('shopify_assistant_config', JSON.stringify(config));
+    sessionStorage.removeItem('shopify_oauth_pending');
+
+    // Clear URL params
+    window.history.replaceState({}, '', REDIRECT_URI);
+    showApp();
+  } catch (e) {
+    // Fallback: ask user to enter token manually
+    document.getElementById('oauth-screen').style.display = 'flex';
+    document.getElementById('oauth-error').textContent = 'Auto token exchange failed. Please paste the redirect URL in the field below after authorizing in Shopify.';
+    document.getElementById('oauth-error').style.display = 'block';
+  }
+}
+
+function showApp() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('oauth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+function resetApp() {
+  if (!confirm('Disconnect and clear session?')) return;
+  sessionStorage.clear();
+  config = {};
+  conversationHistory = [];
+  window.location.href = REDIRECT_URI;
+}
+
+// ─── SHOPIFY API ──────────────────────────────────────────────────────────────
+function shopifyFetch(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': config.accessToken,
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(`https://${STORE}${path}`, opts);
+}
+
+async function getProducts(limit = 20) {
+  const res = await shopifyFetch(`/admin/api/2024-01/products.json?limit=${limit}&fields=id,title,body_html,status,images,variants,tags,vendor`);
+  if (!res.ok) throw new Error('Failed to fetch products');
+  return (await res.json()).products;
+}
+
+async function updateProduct(productId, updates) {
+  const res = await shopifyFetch(`/admin/api/2024-01/products/${productId}.json`, 'PUT', { product: updates });
+  if (!res.ok) throw new Error(`Failed to update product ${productId}`);
+  return (await res.json()).product;
+}
+
+async function getCollections() {
+  const res = await shopifyFetch(`/admin/api/2024-01/custom_collections.json?limit=20`);
+  if (!res.ok) throw new Error('Failed to fetch collections');
+  return (await res.json()).custom_collections;
+}
+
+// ─── CLAUDE ───────────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are a Shopify store management AI assistant for Whiskers Pet Supply. You help the store owner manage their Shopify store by analyzing products, suggesting improvements, and making bulk updates.
+
+Shopify store data will be provided in user messages as JSON.
+
+When asked to UPDATE/REWRITE content, provide improvements AND include this EXACT block at the end:
+
+<SHOPIFY_ACTIONS>
+[
+  {"action": "update_product", "product_id": "123456", "updates": {"title": "New Title", "body_html": "<p>New description</p>"}}
+]
+</SHOPIFY_ACTIONS>
+
+RULES:
+- Only include SHOPIFY_ACTIONS when user explicitly asks to UPDATE something
+- Keep descriptions in HTML using <p>, <ul>, <li>, <strong>
+- Make content engaging, SEO-friendly, conversion-focused
+- Be concise and practical`;
+
+async function callClaude(userMessage) {
+  conversationHistory.push({ role: 'user', content: userMessage });
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': config.anthropicKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: conversationHistory
+    })
+  });
+  if (!res.ok) throw new Error((await res.json()).error?.message || 'Claude API error');
+  const reply = (await res.json()).content[0].text;
+  conversationHistory.push({ role: 'assistant', content: reply });
+  return reply;
+}
+
+async function executeActions(actions) {
+  const results = [];
+  for (const action of actions) {
+    try {
+      if (action.action === 'update_product') {
+        const updated = await updateProduct(action.product_id, action.updates);
+        results.push({ success: true, product: updated });
+      }
+    } catch (e) {
+      results.push({ success: false, error: e.message });
+    }
+  }
+  return results;
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+function removeWelcome() { document.getElementById('welcome-msg')?.remove(); }
+
+function appendMessage(role, content, extraHtml = '') {
+  removeWelcome();
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'user' ? 'You' : 'AI'}</div>
+    <div class="msg-content">
+      <div class="msg-role">${role === 'user' ? 'You' : 'Assistant'}</div>
+      <div class="msg-text">${escapeHtml(content)}</div>
+      ${extraHtml}
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function appendThinking() {
+  removeWelcome();
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.id = 'thinking-indicator';
+  div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-content"><div class="msg-role">Assistant</div><div class="thinking"><span></span><span></span><span></span></div></div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildProductListHtml(products) {
+  if (!products?.length) return '';
+  return `<div style="margin-top:8px">${products.map(p => `
+    <div class="product-item">
+      ${p.images?.[0]?.src ? `<img src="${p.images[0].src}" alt="">` : '<div style="width:36px;height:36px;background:var(--border);border-radius:2px;flex-shrink:0"></div>'}
+      <div class="product-item-info">
+        <div class="product-item-title">${escapeHtml(p.title)}</div>
+        <div class="product-item-meta">ID: ${p.id} · $${p.variants?.[0]?.price || '—'} · ${p.status}</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function buildResultHtml(results) {
+  const ok = results.filter(r => r.success);
+  const fail = results.filter(r => !r.success);
+  let html = '';
+  if (ok.length) html += `<div class="action-block"><div class="action-title">✓ Updated ${ok.length} product${ok.length>1?'s':''} in Shopify</div>${ok.map(r=>`<div style="color:var(--muted);font-size:11px">• ${escapeHtml(r.product.title)}</div>`).join('')}</div>`;
+  if (fail.length) html += `<div class="action-block error"><div class="action-title">✗ ${fail.length} failed</div>${fail.map(r=>`<div style="color:var(--muted);font-size:11px">• ${escapeHtml(r.error)}</div>`).join('')}</div>`;
+  return html;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  input.value = ''; input.style.height = '';
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  appendMessage('user', text);
+
+  let shopifyContext = '';
+  let productData = null;
+  try {
+    const t = text.toLowerCase();
+    const needsProducts = ['product','description','title','inventory','image','seo','list','update','rewrite','bulk','stock'].some(w => t.includes(w));
+    if (needsProducts) {
+      productData = await getProducts(20);
+      shopifyContext = `\n\n[SHOPIFY PRODUCTS]\n${JSON.stringify(productData, null, 2)}`;
+    }
+    if (t.includes('collection')) {
+      shopifyContext += `\n\n[COLLECTIONS]\n${JSON.stringify(await getCollections(), null, 2)}`;
+    }
+  } catch (e) {
+    shopifyContext = `\n\n[Could not fetch store data: ${e.message}]`;
+  }
+
+  const thinkingEl = appendThinking();
+
+  try {
+    const reply = await callClaude(text + shopifyContext);
+    const actionMatch = reply.match(/<SHOPIFY_ACTIONS>([\s\S]*?)<\/SHOPIFY_ACTIONS>/);
+    const cleanReply = reply.replace(/<SHOPIFY_ACTIONS>[\s\S]*?<\/SHOPIFY_ACTIONS>/g, '').trim();
+
+    if (actionMatch) {
+      const actions = JSON.parse(actionMatch[1].trim());
+      thinkingEl.remove();
+      const msgEl = appendMessage('assistant', cleanReply);
+      const results = await executeActions(actions);
+      msgEl.querySelector('.msg-content').insertAdjacentHTML('beforeend', buildResultHtml(results));
+    } else {
+      thinkingEl.remove();
+      let extraHtml = '';
+      if (productData && (text.toLowerCase().includes('list') || text.toLowerCase().includes('show'))) {
+        extraHtml = `<div class="action-block info" style="margin-top:12px"><div class="action-title">📦 Your Products</div>${buildProductListHtml(productData)}</div>`;
+      }
+      appendMessage('assistant', cleanReply, extraHtml);
+    }
+  } catch (e) {
+    thinkingEl.remove();
+    appendMessage('assistant', `Error: ${e.message}`);
+  }
+
+  isLoading = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+function sendQuick(text) { document.getElementById('user-input').value = text; sendMessage(); }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
+</script>
+</body>
+</html>
