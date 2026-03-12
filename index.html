@@ -383,7 +383,7 @@ async function handleOAuthReturn(code, clientId, clientSecret, anthropicKey) {
   try {
     document.getElementById('oauth-screen').style.display = 'flex';
 
-    const tokenRes = await fetch(`https://cors-anywhere.herokuapp.com/https://${STORE}/admin/oauth/access_token`, {
+    const tokenRes = await fetch(`https://corsproxy.io/?https://${STORE}/admin/oauth/access_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
