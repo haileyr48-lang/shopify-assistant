@@ -300,8 +300,10 @@
 </div>
 
 <script>
-const STORE = 'whiskerss.myshopify.com';
+// ─── Config (edit these if your deployment URLs differ) ─────────────────────────
+const STORE = '7820af-3.myshopify.com';
 const REDIRECT_URI = 'https://haileyr48-lang.github.io/shopify-assistant/';
+const TOKEN_API_URL = 'https://shopify-assistant-xi.vercel.app/api/token';
 const SCOPES = 'read_products,write_products,read_inventory,write_inventory,read_orders,read_content,write_content';
 
 let config = {};
@@ -427,7 +429,7 @@ async function handleOAuthReturn(code, clientId, clientSecret, anthropicKey) {
   try {
     document.getElementById('oauth-screen').style.display = 'flex';
 
-    const tokenRes = await fetch('https://shopify-assistant-xi.vercel.app/api/token', {
+    const tokenRes = await fetch(TOKEN_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -483,19 +485,19 @@ function shopifyFetch(path, method = 'GET', body = null) {
 }
 
 async function getProducts(limit = 20) {
-  const res = await shopifyFetch(`/admin/api/2024-01/products.json?limit=${limit}&fields=id,title,body_html,status,images,variants,tags,vendor`);
+  const res = await shopifyFetch(`/admin/api/2025-01/products.json?limit=${limit}&fields=id,title,body_html,status,images,variants,tags,vendor`);
   if (!res.ok) throw new Error('Failed to fetch products');
   return (await res.json()).products;
 }
 
 async function updateProduct(productId, updates) {
-  const res = await shopifyFetch(`/admin/api/2024-01/products/${productId}.json`, 'PUT', { product: updates });
+  const res = await shopifyFetch(`/admin/api/2025-01/products/${productId}.json`, 'PUT', { product: updates });
   if (!res.ok) throw new Error(`Failed to update product ${productId}`);
   return (await res.json()).product;
 }
 
 async function getCollections() {
-  const res = await shopifyFetch(`/admin/api/2024-01/custom_collections.json?limit=20`);
+  const res = await shopifyFetch(`/admin/api/2025-01/custom_collections.json?limit=20`);
   if (!res.ok) throw new Error('Failed to fetch collections');
   return (await res.json()).custom_collections;
 }
