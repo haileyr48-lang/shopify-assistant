@@ -11,6 +11,11 @@ export default async function handler(req, res) {
   const client_secret = process.env.SHOPIFY_CLIENT_SECRET;
 
   if (!code || !shop) return res.status(400).json({ error: 'Missing code or shop' });
+  if (!client_id || !client_secret) {
+    return res.status(500).json({
+      error: 'Server misconfiguration: SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET must be set in environment variables'
+    });
+  }
 
   try {
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
